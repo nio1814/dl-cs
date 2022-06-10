@@ -148,16 +148,11 @@ def setup_data_tfrecords(dir_input,
     i_validate_1 = np.round(
         data_divide[1] * num_files).astype(int) + i_validate_0
 
-    if not os.path.exists(os.path.join(dir_output, 'train')):
-        os.makedirs(os.path.join(dir_output, 'train'))
-    if not os.path.exists(os.path.join(dir_output, 'validate')):
-        os.makedirs(os.path.join(dir_output, 'validate'))
-    if not os.path.exists(os.path.join(dir_output, 'test')):
-        os.makedirs(os.path.join(dir_output, 'test'))
+    for split in ['train', 'validate', 'test']:
+        os.makedirs(os.path.join(dir_output, split), exist_ok=True)
 
     if dir_test_npy:
-        if not os.path.exists(dir_test_npy):
-            os.makedirs(dir_test_npy)
+        os.makedirs(dir_test_npy, exist_ok=True)
 
     i_file = 0
     max_shape_y, max_shape_z = 0, 0
@@ -244,9 +239,8 @@ def setup_data_tfrecords(dir_input,
                         'map': _bytes_feature(sensemap_x.tostring())
                     }))
 
-            tf_writer = tf.python_io.TFRecordWriter(file_out)
-            tf_writer.write(example.SerializeToString())
-            tf_writer.close()
+            with tf.io.TFRecordWriter(file_out) as tf_writer:
+                tf_writer.write(example.SerializeToString())
 
     return max_shape_z, max_shape_y
 
