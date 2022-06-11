@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 import model
 import data
-from absl import flags
+from absl import app, flags
 from utils import tfmri
 import utils.logging
 
@@ -317,7 +317,7 @@ def model_fn(features, labels, mode, params):
 
 def main(_):
     """Execute main function."""
-    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.get_logger().setLevel('INFO')
     logger.setLevel(utils.logging.logging.INFO)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device
@@ -418,4 +418,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    app.run(main)

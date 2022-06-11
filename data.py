@@ -18,7 +18,7 @@ logger = utils.logging.logger
 
 def prepare_filenames(dir_name, search_str='/*.tfrecords', seed=0):
     """Find and return filenames."""
-    if not tf.gfile.Exists(dir_name) or not tf.gfile.IsDirectory(dir_name):
+    if not tf.io.gfile.exists(dir_name) or not tf.io.gfile.isdir(dir_name):
         raise FileNotFoundError('Could not find folder {}'.format(dir_name))
 
     full_path = os.path.join(dir_name)
