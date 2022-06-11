@@ -134,11 +134,29 @@ def setup_data_tfrecords(dir_input,
                          dir_test_npy=None,
                          test_acceleration=12,
                          test_calib=20,
-                         data_divide=(.75, .05, .2)):
-    """Setups training data as tfrecords."""
+                         data_divide=(.75, .05, .2),
+                         replace_files=False):
+    """Setups training data as tfrecords.
+
+    Args:
+        dir_input:
+        dir_output (str): The directory to store TFRecords.
+        dir_test_npy:
+        test_acceleration:
+        test_calib:
+        data_divide:
+        replace_files (bool): Replace previously generated TFRecord files.
+
+    Returns:
+
+    """
+    def get_tfrecord_file_path(x_index) -> str:
+        return os.path.join(
+            dir_output_i, f'{file_name_noext}_x{x_index:03d}.tfrecords')
+
     logger.info('Converting npy data to TFRecords in {}...'.format(dir_output))
 
-    file_list = glob.glob(dir_input + '/*.npy')
+    file_list = glob.glob(os.path.join(dir_input, '*.npy'))
     file_list = [os.path.basename(f) for f in file_list]
     file_list = sorted(file_list)
     num_files = len(file_list)
@@ -182,6 +200,17 @@ def setup_data_tfrecords(dir_input,
             max_shape_y = shape_y
         if shape_z > max_shape_z:
             max_shape_z = shape_z
+
+        if not replace_files:
+            tfrecord_file_paths = {
+                get_tfrecord_file_path(i_x) for i_x in range(shape_x)}
+
+            tfrecord_file_paths_current = set(glob.glob(
+                os.path.join(dir_output, '*.tfrecords')))
+
+            if not (tfrecord_file_paths - tfrecord_file_paths_current):
+                continue
+
         logger.debug('  Slice shape: (%d, %d)' % (shape_z, shape_y))
         logger.debug('  Num channels: %d' % shape_c)
 
@@ -216,8 +245,7 @@ def setup_data_tfrecords(dir_input,
         kspace = fftc.ifftc(kspace, axis=-1)
         kspace = kspace.astype(np.complex64)
         for i_x in range(shape_x):
-            file_out = os.path.join(
-                dir_output_i, '%s_x%03d.tfrecords' % (file_name_noext, i_x))
+            file_out = get_tfrecord_file_path(i_x)
             kspace_x = kspace[:, :, :, i_x]
             sensemap_x = sensemap[:, :, :, :, i_x]
 
