@@ -8,91 +8,90 @@ import numpy as np
 import tensorflow as tf
 import model
 import data
+from absl import flags
 from utils import tfmri
 import utils.logging
 
 # Data dimensions
-tf.app.flags.DEFINE_integer('shape_y', 320, 'Image shape in Y')
-tf.app.flags.DEFINE_integer('shape_z', 256, 'Image shape in Z')
-tf.app.flags.DEFINE_integer('shape_calib', 20, 'Shape of calibration region')
-tf.app.flags.DEFINE_integer('num_channels', 8,
-                            'Number of channels for input datasets.')
-tf.app.flags.DEFINE_integer(
+flags.DEFINE_integer('shape_y', 320, 'Image shape in Y')
+flags.DEFINE_integer('shape_z', 256, 'Image shape in Z')
+flags.DEFINE_integer('shape_calib', 20, 'Shape of calibration region')
+flags.DEFINE_integer(
+    'num_channels', 8, 'Number of channels for input datasets.')
+flags.DEFINE_integer(
     'num_maps', 1, 'Number of eigen maps for input sensitivity maps.')
 
 # For logging
-tf.app.flags.DEFINE_string('model_dir', 'summary/model',
-                           'Directory for checkpoints and event logs.')
-tf.app.flags.DEFINE_string('warm_start_dir', None,
-                           'Directory for warm starting model.')
-tf.app.flags.DEFINE_integer('num_summary_image', 4,
-                            'Number of images for summary output')
-tf.app.flags.DEFINE_integer('log_step_count_steps', 10,
-                            'The frequency with which logs are print.')
-tf.app.flags.DEFINE_integer('save_summary_steps', 100,
-                            'The frequency with which summaries are saved')
-tf.app.flags.DEFINE_integer('save_checkpoints_secs', 60,
-                            'The frequency with which the model is saved [s]')
-tf.app.flags.DEFINE_integer('random_seed', 1000,
-                            'Seed to initialize random number generators.')
+flags.DEFINE_string(
+    'model_dir', 'summary/model', 'Directory for checkpoints and event logs.')
+flags.DEFINE_string(
+    'warm_start_dir', None, 'Directory for warm starting model.')
+flags.DEFINE_integer(
+    'num_summary_image', 4, 'Number of images for summary output')
+flags.DEFINE_integer(
+    'log_step_count_steps', 10, 'The frequency with which logs are print.')
+flags.DEFINE_integer(
+    'save_summary_steps', 100, 'The frequency with which summaries are saved')
+flags.DEFINE_integer(
+    'save_checkpoints_secs', 60,
+    'The frequency with which the model is saved [s]')
+flags.DEFINE_integer(
+    'random_seed', 1000, 'Seed to initialize random number generators.')
 
 # For model
-tf.app.flags.DEFINE_integer('unrolled_steps', 4,
-                            'Number of grad steps for unrolled algorithms')
-tf.app.flags.DEFINE_integer('unrolled_num_features', 128,
-                            'Number of feature maps in each ResBlock')
-tf.app.flags.DEFINE_integer('unrolled_num_resblocks', 3,
-                            'Number of ResBlocks per iteration')
-tf.app.flags.DEFINE_boolean('unrolled_share', False,
-                            'Share weights between iterations')
-tf.app.flags.DEFINE_boolean('hard_projection', False,
-                            'Turn on/off hard data projection at the end')
+flags.DEFINE_integer(
+    'unrolled_steps', 4, 'Number of grad steps for unrolled algorithms')
+flags.DEFINE_integer(
+    'unrolled_num_features', 128, 'Number of feature maps in each ResBlock')
+flags.DEFINE_integer(
+    'unrolled_num_resblocks', 3, 'Number of ResBlocks per iteration')
+flags.DEFINE_boolean(
+    'unrolled_share', False, 'Share weights between iterations')
+flags.DEFINE_boolean(
+    'hard_projection', False, 'Turn on/off hard data projection at the end')
 
 # Optimization Flags
-tf.app.flags.DEFINE_string('device', '0', 'GPU device to use.')
-tf.app.flags.DEFINE_integer('batch_size', 4,
-                            'The number of samples in each batch.')
-tf.app.flags.DEFINE_float('loss_l1', 1, 'L1 loss')
-tf.app.flags.DEFINE_float('loss_l2', 0, 'L2 loss')
-tf.app.flags.DEFINE_float('loss_adv', 0, 'Adversarial loss')
-tf.app.flags.DEFINE_integer(
-    'adv_steps', 5,
-    'Steps to train adversarial loss for each recon train step')
-tf.app.flags.DEFINE_float(
+flags.DEFINE_string('device', '0', 'GPU device to use.')
+flags.DEFINE_integer('batch_size', 4, 'The number of samples in each batch.')
+flags.DEFINE_float('loss_l1', 1, 'L1 loss')
+flags.DEFINE_float('loss_l2', 0, 'L2 loss')
+flags.DEFINE_float('loss_adv', 0, 'Adversarial loss')
+flags.DEFINE_integer(
+    'adv_steps', 5, 'Steps to train adversarial loss for each recon train step')
+flags.DEFINE_float(
     'adam_beta1', 0.9,
     'The exponential decay rate for the 1st moment estimates.')
-tf.app.flags.DEFINE_float(
+flags.DEFINE_float(
     'adam_beta2', 0.999,
     'The exponential decay rate for the 2nd moment estimates.')
-tf.app.flags.DEFINE_float('opt_epsilon', 1e-8,
-                          'Epsilon term for the optimizer.')
-tf.app.flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-tf.app.flags.DEFINE_integer('max_steps', None,
-                            'The maximum number of training steps.')
+flags.DEFINE_float('opt_epsilon', 1e-8, 'Epsilon term for the optimizer.')
+flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+flags.DEFINE_integer('max_steps', None, 'The maximum number of training steps.')
 
 # Dataset Flags
-tf.app.flags.DEFINE_string(
+flags.DEFINE_string(
     'dir_validate', 'data/tfrecord/validate',
     'Directory for validation data (None turns off validation)')
-tf.app.flags.DEFINE_string('dir_masks', 'data/masks',
-                           'Directory where masks are located.')
-tf.app.flags.DEFINE_string('dir_train', 'data/tfrecord/train',
-                           'Directory where training data are located.')
+flags.DEFINE_string(
+    'dir_masks', 'data/masks', 'Directory where masks are located.')
+flags.DEFINE_string(
+    'dir_train', 'data/tfrecord/train',
+    'Directory where training data are located.')
 
-FLAGS = tf.app.flags.FLAGS
+FLAGS = flags.FLAGS
 logger = utils.logging.logger
 
 
-class RunTrainOpHooks(tf.train.SessionRunHook):
-    """Based on tf.contrib.gan training."""
-
-    def __init__(self, train_op, train_steps):
-        self.train_op = train_op
-        self.train_steps = train_steps
-
-    def before_run(self, run_context):
-        for _ in range(self.train_steps):
-            run_context.session.run(self.train_op)
+# class RunTrainOpHooks(tf.train.SessionRunHook):
+#     """Based on tf.contrib.gan training."""
+#
+#     def __init__(self, train_op, train_steps):
+#         self.train_op = train_op
+#         self.train_steps = train_steps
+#
+#     def before_run(self, run_context):
+#         for _ in range(self.train_steps):
+#             run_context.session.run(self.train_op)
 
 
 def model_fn(features, labels, mode, params):

@@ -44,7 +44,7 @@ All TFRecords contain fully sampled raw k-space data and sensitivity maps.
 The training can be performed using the following command.
 
 ```bash
-python3 --model_dir summary/model recon_train.py
+python3 recon_train.py --model_dir summary/model
 ```
 
 All the parameters (dimensions and etc) assume that the training is performed with the knee datasets from mridata.org. See the `--help` flag for more information on how to adjust the training for new datasets.
